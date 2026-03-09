@@ -16,7 +16,10 @@ API para enriquecer perfiles de LinkedIn usando la API de Lusha.
 
 ## Instalación
 
-1. Clonar el repositorio
+1. Clonar el repositorio:
+   ```bash
+   git clone https://github.com/PyloomNG/FastApi-local-lusha.git
+   ```
 2. Crear un entorno virtual:
    ```bash
    python -m venv venv
