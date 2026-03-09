@@ -31,19 +31,6 @@ API para enriquecer perfiles de LinkedIn usando la API de Lusha.
    ```bash
    pip install -r requirements.txt
    ```
-5. Configurar variables de entorno:
-   ```bash
-   cp .env.example .env
-   # Editar .env con tu API key de Lusha
-   ```
-
-## Configuración
-
-Editar el archivo `.env`:
-
-```
-LUSHA_API_KEY=tu_api_key_de_lusha
-```
 
 ## Uso
 
@@ -131,7 +118,7 @@ FastApi-local-Lusha/
 ├── main.py                # Aplicación FastAPI
 ├── run.py                 # Script de ejecución
 ├── requirements.txt
-├── .env.example
+├── .env
 ├── .gitignore
 └── README.md
 ```
