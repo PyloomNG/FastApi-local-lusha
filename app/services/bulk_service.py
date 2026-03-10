@@ -57,8 +57,20 @@ class BulkService:
         try:
             data = response.json()
             # Lusha API response structure: contact.data contains the person
-            contact = data.get("contact", {})
-            person = contact.get("data", {})
+            contact = data.get("contact") or {}
+
+            # Check for errors in response
+            error = contact.get("error") if contact else None
+            if error:
+                print(f"   Lusha error: {error.get('name')} - {error.get('code')}")
+                return self._empty_result()
+
+            person = (contact.get("data") or {}) if contact else {}
+
+            # If no person data, return empty result
+            if not person:
+                print(f"   No person data found in response")
+                return self._empty_result()
 
             # Extract email from emailAddresses array
             email = None
@@ -88,15 +100,15 @@ class BulkService:
             country = location_info.get("country") if location_info else None
 
             return {
-                "firstName": person.get("firstName"),
-                "lastName": person.get("lastName"),
-                "fullName": person.get("fullName"),
-                "headline": job_title,
+                "first_name": person.get("firstName"),
+                "last_name": person.get("lastName"),
+                "full_name": person.get("fullName"),
+                "job_title": job_title,
                 "location": location,
-                "profileUrl": person.get("socialLinks", {}).get("linkedin"),
-                "Email": email,
-                "Phone": phone,
-                "company": company_name,
+                "linkedin_url": person.get("socialLinks", {}).get("linkedin"),
+                "email": email,
+                "phone": phone,
+                "company_name": company_name,
                 "company_domain": company_domain,
                 "country": country,
             }
@@ -106,15 +118,15 @@ class BulkService:
 
     def _empty_result(self) -> dict:
         return {
-            "firstName": None,
-            "lastName": None,
-            "fullName": None,
-            "headline": None,
+            "first_name": None,
+            "last_name": None,
+            "full_name": None,
+            "job_title": None,
             "location": None,
-            "profileUrl": None,
-            "Email": None,
-            "Phone": None,
-            "company": None,
+            "linkedin_url": None,
+            "email": None,
+            "phone": None,
+            "company_name": None,
             "company_domain": None,
             "country": None,
         }
