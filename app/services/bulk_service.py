@@ -57,49 +57,63 @@ class BulkService:
 
         try:
             data = response.json()
+            # If response is not a dict, return empty result
+            if not isinstance(data, dict):
+                print(f"   Invalid response format")
+                return self._empty_result(linkedin_url=clean_url)
+
             # Lusha API response structure: contact.data contains the person
             contact = data.get("contact") or {}
 
             # Check for errors in response - still return result with linkedin_url
-            error = contact.get("error") if contact else None
+            error = contact.get("error") if isinstance(contact, dict) else None
             if error:
                 print(f"   Lusha error: {error.get('name')} - {error.get('code')}")
                 # Return result with linkedin_url but empty fields
                 return self._empty_result(linkedin_url=clean_url)
 
-            person = (contact.get("data") or {}) if contact else {}
+            # If contact is not a dict or has no data, return empty
+            if not isinstance(contact, dict):
+                print(f"   No contact data")
+                return self._empty_result(linkedin_url=clean_url)
+
+            person = (contact.get("data") or {}) if isinstance(contact, dict) else {}
 
             # If no person data, return result with linkedin_url
-            if not person:
+            if not person or not isinstance(person, dict):
                 print(f"   No person data found in response")
                 return self._empty_result(linkedin_url=clean_url)
 
             # Extract email from emailAddresses array
             email = None
-            email_addresses = person.get("emailAddresses", [])
-            if email_addresses:
+            email_addresses = person.get("emailAddresses") or []
+            if email_addresses and isinstance(email_addresses, list):
                 email = email_addresses[0].get("email") if isinstance(email_addresses[0], dict) else None
 
             # Extract phone from phoneNumbers array
             phone = None
-            phone_numbers = person.get("phoneNumbers", [])
-            if phone_numbers:
+            phone_numbers = person.get("phoneNumbers") or []
+            if phone_numbers and isinstance(phone_numbers, list):
                 phone = phone_numbers[0].get("number") if isinstance(phone_numbers[0], dict) else None
 
             # Extract company info
-            company_info = person.get("company", {})
-            company_name = company_info.get("name") if company_info else None
-            company_domains = company_info.get("domains", {}) if company_info else {}
-            company_domain = company_domains.get("homepage") if company_domains else None
+            company_info = person.get("company") or {}
+            company_name = company_info.get("name") if isinstance(company_info, dict) else None
+            company_domains = company_info.get("domains") or {} if isinstance(company_info, dict) else {}
+            company_domain = company_domains.get("homepage") if isinstance(company_domains, dict) else None
 
             # Extract job title
-            job_title_info = person.get("jobTitle", {})
-            job_title = job_title_info.get("title") if job_title_info else None
+            job_title_info = person.get("jobTitle") or {}
+            job_title = job_title_info.get("title") if isinstance(job_title_info, dict) else None
 
             # Extract location
-            location_info = person.get("location", {})
-            location = location_info.get("city") if location_info else None
-            country = location_info.get("country") if location_info else None
+            location_info = person.get("location") or {}
+            location = location_info.get("city") if isinstance(location_info, dict) else None
+            country = location_info.get("country") if isinstance(location_info, dict) else None
+
+            # Extract social links
+            social_links = person.get("socialLinks") or {}
+            linkedin_url_response = social_links.get("linkedin") if isinstance(social_links, dict) else None
 
             return {
                 "first_name": person.get("firstName"),
@@ -107,7 +121,7 @@ class BulkService:
                 "full_name": person.get("fullName"),
                 "job_title": job_title,
                 "location": location,
-                "linkedin_url": person.get("socialLinks", {}).get("linkedin"),
+                "linkedin_url": linkedin_url_response,
                 "email": email,
                 "phone": phone,
                 "company_name": company_name,
@@ -116,7 +130,7 @@ class BulkService:
             }
         except Exception as e:
             print(f"   Parse error: {e}")
-            return self._empty_result()
+            return self._empty_result(linkedin_url=clean_url)
 
     def _empty_result(self, linkedin_url: str = None) -> dict:
         return {
