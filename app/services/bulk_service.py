@@ -1,4 +1,6 @@
+import json
 import time
+from pathlib import Path
 from typing import Union
 import pandas as pd
 import numpy as np
@@ -12,6 +14,27 @@ class BulkService:
         self.endpoint = settings.LUSHA_ENDPOINT
         self.max_retries = settings.LUSHA_MAX_RETRIES
         self.delay = settings.LUSHA_DELAY_BETWEEN_REQUESTS
+        self.checkpoint_file = settings.BASE_DIR / "data" / "checkpoint.json"
+
+    def _load_checkpoint(self) -> dict:
+        """Load checkpoint file"""
+        if self.checkpoint_file.exists():
+            try:
+                with open(self.checkpoint_file, 'r') as f:
+                    return json.load(f)
+            except:
+                pass
+        return {"processed": [], "results": []}
+
+    def _save_checkpoint(self, checkpoint: dict):
+        """Save checkpoint to file"""
+        with open(self.checkpoint_file, 'w') as f:
+            json.dump(checkpoint, f)
+
+    def _clear_checkpoint(self):
+        """Clear checkpoint file"""
+        if self.checkpoint_file.exists():
+            self.checkpoint_file.unlink()
 
     def _clean_linkedin_url(self, url: str) -> str:
         """Extract base LinkedIn URL without extra parameters"""
@@ -178,6 +201,34 @@ class BulkService:
         total = len(df)
         print(f"\nStarting enrichment of {total} records...")
 
+        # Load checkpoint to resume
+        checkpoint = self._load_checkpoint()
+        processed_urls = set(checkpoint.get("processed", []))
+        results = checkpoint.get("results", [])
+
+        # If we have results from previous run, fill the dataframe
+        if results:
+            for i, row in df.iterrows():
+                profile_url = str(row.get("profileUrl", ""))
+                if profile_url in processed_urls:
+                    # Find matching result
+                    for r in results:
+                        if r.get("linkedin_url") == profile_url or r.get("linkedin_url") == self._clean_linkedin_url(profile_url):
+                            df.at[i, "Email"] = r.get("email")
+                            df.at[i, "Phone"] = r.get("phone")
+                            df.at[i, "First Name"] = r.get("first_name")
+                            df.at[i, "Last Name"] = r.get("last_name")
+                            df.at[i, "Company"] = r.get("company_name")
+                            df.at[i, "Job Title"] = r.get("job_title")
+                            df.at[i, "Location"] = r.get("location")
+                            df.at[i, "Country"] = r.get("country")
+                            break
+
+        # Count already processed
+        processed_count = len(processed_urls)
+        if processed_count > 0:
+            print(f"Resuming from checkpoint. Already processed: {processed_count}/{total}")
+
         for i, row in df.iterrows():
             profile_url = row.get("profileUrl")
 
@@ -185,10 +236,18 @@ class BulkService:
                 print(f"  [{i+1}/{total}] No URL, skipping...")
                 continue
 
+            profile_url_str = str(profile_url)
+            clean_url = self._clean_linkedin_url(profile_url_str)
+
+            # Skip if already processed
+            if profile_url_str in processed_urls or clean_url in processed_urls:
+                print(f"  [{i+1}/{total}] Already processed, skipping...")
+                continue
+
             print(f"  [{i+1}/{total}] Enriching: {profile_url}")
 
             try:
-                result = self._enrich_single(profile_url)
+                result = self._enrich_single(profile_url_str)
 
                 df.at[i, "Email"] = result.get("email")
                 df.at[i, "Phone"] = result.get("phone")
@@ -198,6 +257,13 @@ class BulkService:
                 df.at[i, "Job Title"] = result.get("job_title")
                 df.at[i, "Location"] = result.get("location")
                 df.at[i, "Country"] = result.get("country")
+
+                # Save to checkpoint
+                processed_urls.add(clean_url)
+                results.append(result)
+                checkpoint = {"processed": list(processed_urls), "results": results}
+                self._save_checkpoint(checkpoint)
+
             except Exception as e:
                 print(f"  [{i+1}/{total}] Error processing: {e}")
                 # Continue with next record
@@ -206,6 +272,9 @@ class BulkService:
             if i < total - 1:
                 print(f"    Waiting 10s...")
                 time.sleep(10)
+
+        # Clear checkpoint when done
+        self._clear_checkpoint()
 
         if return_json:
             df_clean = df.replace({np.nan: None})
