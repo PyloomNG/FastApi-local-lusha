@@ -16,8 +16,9 @@ class BulkService:
         """Extract base LinkedIn URL without extra parameters"""
         if "?" in url:
             url = url.split("?")[0]
-        if not url.endswith("/"):
-            url += "/"
+        # Remove trailing slash
+        if url.endswith("/"):
+            url = url[:-1]
         return url
 
     def _enrich_single(self, linkedin_url: str) -> dict:
@@ -48,11 +49,11 @@ class BulkService:
 
             if response.status_code != 200:
                 print(f"   Error: {response.status_code} - {response.text}")
-                return self._empty_result()
+                return self._empty_result(linkedin_url=linkedin_url)
 
             break
         else:
-            return self._empty_result()
+            return self._empty_result(linkedin_url=linkedin_url)
 
         try:
             data = response.json()
