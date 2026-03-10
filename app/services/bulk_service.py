@@ -204,8 +204,8 @@ class BulkService:
 
             # Wait between requests
             if i < total - 1:
-                print(f"    Waiting {}s...".format(self.delay))
-                time.sleep(self.delay)
+                print(f"    Waiting 10s...")
+                time.sleep(10)
 
         if return_json:
             df_clean = df.replace({np.nan: None})
