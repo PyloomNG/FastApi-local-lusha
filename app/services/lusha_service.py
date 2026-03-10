@@ -58,8 +58,18 @@ class LushaService:
         data = response.json()
 
         # Lusha API response structure: contact.data contains the person
-        contact = data.get("contact", {})
-        person = contact.get("data", {})
+        contact = data.get("contact") or {}
+
+        # Check for errors in response
+        error = contact.get("error") if contact else None
+        if error:
+            raise Exception(f"Lusha API error: {error.get('name')} - {error.get('code')}")
+
+        person = (contact.get("data") or {}) if contact else {}
+
+        # If no person data, return empty result
+        if not person:
+            return LushaResult(linkedin_url=linkedin_url)
 
         # Extract email from emailAddresses array
         email = None
