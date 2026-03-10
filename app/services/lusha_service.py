@@ -60,14 +60,15 @@ class LushaService:
         # Lusha API response structure: contact.data contains the person
         contact = data.get("contact") or {}
 
-        # Check for errors in response
+        # Check for errors in response - still return result with linkedin_url
         error = contact.get("error") if contact else None
         if error:
-            raise Exception(f"Lusha API error: {error.get('name')} - {error.get('code')}")
+            logger.warning(f"Lusha error: {error.get('name')} - {error.get('code')}")
+            return LushaResult(linkedin_url=linkedin_url)
 
         person = (contact.get("data") or {}) if contact else {}
 
-        # If no person data, return empty result
+        # If no person data, return result with linkedin_url
         if not person:
             return LushaResult(linkedin_url=linkedin_url)
 

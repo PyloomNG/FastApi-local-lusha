@@ -59,18 +59,19 @@ class BulkService:
             # Lusha API response structure: contact.data contains the person
             contact = data.get("contact") or {}
 
-            # Check for errors in response
+            # Check for errors in response - still return result with linkedin_url
             error = contact.get("error") if contact else None
             if error:
                 print(f"   Lusha error: {error.get('name')} - {error.get('code')}")
-                return self._empty_result()
+                # Return result with linkedin_url but empty fields
+                return self._empty_result(linkedin_url=clean_url)
 
             person = (contact.get("data") or {}) if contact else {}
 
-            # If no person data, return empty result
+            # If no person data, return result with linkedin_url
             if not person:
                 print(f"   No person data found in response")
-                return self._empty_result()
+                return self._empty_result(linkedin_url=clean_url)
 
             # Extract email from emailAddresses array
             email = None
@@ -116,14 +117,14 @@ class BulkService:
             print(f"   Parse error: {e}")
             return self._empty_result()
 
-    def _empty_result(self) -> dict:
+    def _empty_result(self, linkedin_url: str = None) -> dict:
         return {
             "first_name": None,
             "last_name": None,
             "full_name": None,
             "job_title": None,
             "location": None,
-            "linkedin_url": None,
+            "linkedin_url": linkedin_url,
             "email": None,
             "phone": None,
             "company_name": None,
