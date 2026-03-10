@@ -11,6 +11,7 @@ class BulkService:
         self.api_key = settings.LUSHA_API_KEY
         self.endpoint = settings.LUSHA_ENDPOINT
         self.max_retries = settings.LUSHA_MAX_RETRIES
+        self.delay = settings.LUSHA_DELAY_BETWEEN_REQUESTS
 
     def _clean_linkedin_url(self, url: str) -> str:
         """Extract base LinkedIn URL without extra parameters"""
@@ -203,8 +204,8 @@ class BulkService:
 
             # Wait between requests
             if i < total - 1:
-                print(f"    Waiting 3s...")
-                time.sleep(3)
+                print(f"    Waiting {}s...".format(self.delay))
+                time.sleep(self.delay)
 
         if return_json:
             df_clean = df.replace({np.nan: None})
