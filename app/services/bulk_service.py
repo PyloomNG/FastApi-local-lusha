@@ -186,16 +186,20 @@ class BulkService:
 
             print(f"  [{i+1}/{total}] Enriching: {profile_url}")
 
-            result = self._enrich_single(profile_url)
+            try:
+                result = self._enrich_single(profile_url)
 
-            df.at[i, "Email"] = result["email"]
-            df.at[i, "Phone"] = result["phone"]
-            df.at[i, "First Name"] = result["first_name"]
-            df.at[i, "Last Name"] = result["last_name"]
-            df.at[i, "Company"] = result["company"]
-            df.at[i, "Job Title"] = result["job_title"]
-            df.at[i, "Location"] = result["location"]
-            df.at[i, "Country"] = result["country"]
+                df.at[i, "Email"] = result.get("email")
+                df.at[i, "Phone"] = result.get("phone")
+                df.at[i, "First Name"] = result.get("first_name")
+                df.at[i, "Last Name"] = result.get("last_name")
+                df.at[i, "Company"] = result.get("company_name")
+                df.at[i, "Job Title"] = result.get("job_title")
+                df.at[i, "Location"] = result.get("location")
+                df.at[i, "Country"] = result.get("country")
+            except Exception as e:
+                print(f"  [{i+1}/{total}] Error processing: {e}")
+                # Continue with next record
 
             # Wait between requests
             if i < total - 1:
